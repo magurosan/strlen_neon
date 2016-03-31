@@ -60,8 +60,8 @@ inline unsigned int GetBytesMask2(uint8x16_t a, uint8x16_t b)
 
 inline bool isFound(uint8x16_t x) 
 {
-	uint64x2_t xx = vreinterpretq_u64_u8(x);
-	return vgetq_lane_u64(xx, 0) || vgetq_lane_u64(xx, 1);
+	uint8x8_t xx = vorr_u8(vget_low_u8(x), vget_high_u8(x));
+	return vget_lane_u64(vreinterpret_u64_u8(xx), 0);
 }
 
 inline bool isFound2(uint8x16_t a, uint8x16_t b) 
