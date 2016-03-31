@@ -35,6 +35,17 @@ static const uint8x16_t compaction_mask = {
     1, 2, 4, 8, 16, 32, 64, 128 
 };
 
+
+inline unsigned int GetBytesMask(uint8x16_t a) 
+{
+    uint8x16_t am = vandq_u8(a, compaction_mask);
+    uint8x8_t a_sum = vpadd_u8(vget_low_u8(am), vget_high_u8(am)); 
+    a_sum = vpadd_u8(a_sum, a_sum);
+    a_sum = vpadd_u8(a_sum, a_sum);
+    return vget_lane_u16(vreinterpret_u16_u8(a_sum), 0);
+}
+
+
 inline unsigned int GetBytesMask2(uint8x16_t a, uint8x16_t b) 
 {
     uint8x16_t am = vandq_u8(a, compaction_mask);
@@ -46,24 +57,16 @@ inline unsigned int GetBytesMask2(uint8x16_t a, uint8x16_t b)
     return vget_lane_u32(vreinterpret_u32_u8(a_sum), 0);   
 }
 
-inline unsigned int GetBytesMask(uint8x16_t a) 
-{
-    uint8x16_t am = vandq_u8(a, compaction_mask);
-    uint8x8_t a_sum = vpadd_u8(vget_low_u8(am), vget_high_u8(am)); 
-    a_sum = vpadd_u8(a_sum, a_sum);
-    a_sum = vpadd_u8(a_sum, a_sum);
-    return vget_lane_u16(vreinterpret_u16_u8(a_sum), 0);
-}
-
-inline bool isFound2(uint8x16_t a, uint8x16_t b) 
-{
-    return isFound(vorrq_u8(a, b));
-}
 
 inline bool isFound(uint8x16_t x) 
 {
     uint64x2_t xx = vreinterpretq_u64_u8(x);
     return vgetq_lane_u64(xx, 0) || vgetq_lane_u64(xx, 1);
+}
+
+inline bool isFound2(uint8x16_t a, uint8x16_t b) 
+{
+    return isFound(vorrq_u8(a, b));
 }
 
 
@@ -131,8 +134,8 @@ size_t strlenNEON(const char *p)
 		uint8x16_t x = *(const uint8x16_t*)&p[0];
 		uint8x16_t a = vceqq_u8(x, c16);
 
-		if (mask) {
-        unsigned int mask = GetBytesMask(a);
+		if (isFound(a)) {
+            unsigned int mask = GetBytesMask(a);
 			return p + __builtin_ctz(mask) - top;
 		}
 		p += 16;
