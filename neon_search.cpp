@@ -31,42 +31,42 @@ memchrNEON 1652.6  786.0  628.7  476.6  417.0  337.0  284.7  204.0  127.4   87.4
 #define ALIGN(x) __attribute__((aligned(x)))
 
 static const uint8x16_t compaction_mask = { 
-    1, 2, 4, 8, 16, 32, 64, 128, 
-    1, 2, 4, 8, 16, 32, 64, 128 
+	1, 2, 4, 8, 16, 32, 64, 128, 
+	1, 2, 4, 8, 16, 32, 64, 128 
 };
 
 
 inline unsigned int GetBytesMask(uint8x16_t a) 
 {
-    uint8x16_t am = vandq_u8(a, compaction_mask);
-    uint8x8_t a_sum = vpadd_u8(vget_low_u8(am), vget_high_u8(am)); 
-    a_sum = vpadd_u8(a_sum, a_sum);
-    a_sum = vpadd_u8(a_sum, a_sum);
-    return vget_lane_u16(vreinterpret_u16_u8(a_sum), 0);
+	uint8x16_t am = vandq_u8(a, compaction_mask);
+	uint8x8_t a_sum = vpadd_u8(vget_low_u8(am), vget_high_u8(am)); 
+	a_sum = vpadd_u8(a_sum, a_sum);
+	a_sum = vpadd_u8(a_sum, a_sum);
+	return vget_lane_u16(vreinterpret_u16_u8(a_sum), 0);
 }
 
 
 inline unsigned int GetBytesMask2(uint8x16_t a, uint8x16_t b) 
 {
-    uint8x16_t am = vandq_u8(a, compaction_mask);
-    uint8x16_t bm = vandq_u8(b, compaction_mask);
-    uint8x8_t a_sum = vpadd_u8(vget_low_u8(am), vget_high_u8(am)); 
-    uint8x8_t b_sum = vpadd_u8(vget_low_u8(bm), vget_high_u8(bm)); 
-    a_sum = vpadd_u8(a_sum, b_sum);
-    a_sum = vpadd_u8(a_sum, a_sum);
-    return vget_lane_u32(vreinterpret_u32_u8(a_sum), 0);   
+	uint8x16_t am = vandq_u8(a, compaction_mask);
+	uint8x16_t bm = vandq_u8(b, compaction_mask);
+	uint8x8_t a_sum = vpadd_u8(vget_low_u8(am), vget_high_u8(am)); 
+	uint8x8_t b_sum = vpadd_u8(vget_low_u8(bm), vget_high_u8(bm)); 
+	a_sum = vpadd_u8(a_sum, b_sum);
+	a_sum = vpadd_u8(a_sum, a_sum);
+	return vget_lane_u32(vreinterpret_u32_u8(a_sum), 0);   
 }
 
 
 inline bool isFound(uint8x16_t x) 
 {
-    uint64x2_t xx = vreinterpretq_u64_u8(x);
-    return vgetq_lane_u64(xx, 0) || vgetq_lane_u64(xx, 1);
+	uint64x2_t xx = vreinterpretq_u64_u8(x);
+	return vgetq_lane_u64(xx, 0) || vgetq_lane_u64(xx, 1);
 }
 
 inline bool isFound2(uint8x16_t a, uint8x16_t b) 
 {
-    return isFound(vorrq_u8(a, b));
+	return isFound(vorrq_u8(a, b));
 }
 
 
@@ -95,9 +95,9 @@ void *memchrNEON(const void *ptr, int c, size_t len)
 			uint8x16_t y = *(const uint8x16_t*)&p[16];
 			uint8x16_t a = vceqq_u8(x, c16);
 			uint8x16_t b = vceqq_u8(y, c16);
-                        
+
 			if (isFound2(a, b)) {
-                unsigned int mask = GetBytesMask2(a,b);
+				unsigned int mask = GetBytesMask2(a,b);
 				return (void*)(p + __builtin_ctz(mask));
 			}
 			len -= 32;
@@ -122,7 +122,7 @@ size_t strlenNEON(const char *p)
 		uint8x16_t x = *(const uint8x16_t*)&p[-n];
 		uint8x16_t a = vceqq_u8(x, c16);
 
-        unsigned int mask = GetBytesMask(a);
+		unsigned int mask = GetBytesMask(a);
 		mask = mask >> n;
 		if (mask) {
 			return __builtin_ctz(mask);
@@ -130,12 +130,12 @@ size_t strlenNEON(const char *p)
 		p += 16 - n;
 	}
 	assert((reinterpret_cast<size_t>(p) & 15) == 0);
-    if (reinterpret_cast<size_t>(p) & 31) {
+	if (reinterpret_cast<size_t>(p) & 31) {
 		uint8x16_t x = *(const uint8x16_t*)&p[0];
 		uint8x16_t a = vceqq_u8(x, c16);
 
 		if (isFound(a)) {
-            unsigned int mask = GetBytesMask(a);
+ 			unsigned int mask = GetBytesMask(a);
 			return p + __builtin_ctz(mask) - top;
 		}
 		p += 16;
@@ -148,7 +148,7 @@ size_t strlenNEON(const char *p)
 		uint8x16_t b = vceqq_u8(y, c16);
 
 		if (isFound2(a,b)) {
-            unsigned int mask = GetBytesMask2(a, b);
+ 			unsigned int mask = GetBytesMask2(a, b);
 			return p + __builtin_ctz(mask) - top;
 		}
 		p += 32;
