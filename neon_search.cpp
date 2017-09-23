@@ -1,7 +1,7 @@
 /*
     vectorized memchr and strlen implementaion for ARM with NEON, GCC4.8 or later.
         
-	Copyright (C) 2016 Masaki Ota. All Rights Reserved.
+	Copyright (C) 2016-2017 Masaki Ota. All Rights Reserved.
     
     based on: 
     	fast memchr and strlen using SSE2 for gcc 4.x / Visual Studio 2008(32bit/64bit)
@@ -10,8 +10,7 @@
         http://labs.cybozu.co.jp/blog/mitsunari/2008/06/fast_strlen_and_memchr_by_sse2_1.html
 
 	How to compile this file
-	g++ search.cpp -O3 -fomit-frame-pointer -mfpu=neon
-
+	g++ neon_search.cpp -O3 -fomit-frame-pointer -mfpu=neon
 
 Raspberry Pi 3 Model B (Cortex-A53 1.2GHz, Raspbian(Jessie), 32-bit)
 ave             2      5      7     10     12     16     20     32     64    128    256    512   1024
@@ -20,6 +19,14 @@ strlenBLOG  955.3  609.9  512.8  427.1  396.6  358.7  336.5  304.1  277.5  264.6
 strlenNEON 1783.2  870.0  699.7  534.2  471.6  383.1  323.4  231.0  139.6   91.1   64.8   50.5   46.4
 memchrANSI 2245.1 1259.5 1023.8  798.6  709.8  596.2  519.9  409.8  311.1  261.8  235.9  221.2  216.9
 memchrNEON 1652.6  786.0  628.7  476.6  417.0  337.0  284.7  204.0  127.4   87.4   66.3   54.9   51.8
+
+ASUS TinkerBoard (Rockchip RK3288-C Cortex-A17 1.8 GHz, TinkerOS 2.0(Debian 9 Stretch), 32-bit)
+ave             2      5      7     10     12     16     20     32     64    128    256    512   1024
+strlenANSI  986.1  472.7  373.6  283.1  250.0  225.8  176.6  128.8   78.9   57.6   47.0   42.9   44.1
+strlenBLOG  628.3  404.0  328.4  256.8  236.6  231.1  190.2  167.3  137.3  126.6  121.6  117.3  122.6
+strlenNEON 1313.4  667.7  539.1  410.5  362.9  296.1  264.0  184.1  108.1   68.4   41.7   27.0   23.6
+memchrANSI 1016.3  577.9  472.2  373.7  335.2  280.3  249.2  176.9  110.7   77.3   60.1   51.8   53.4
+memchrNEON 1245.2  578.6  447.1  325.6  288.1  225.1  186.9  135.5   84.3   56.0   34.8   25.6   23.8
 */
 #include <stdio.h>
 #include <stdlib.h>
