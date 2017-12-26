@@ -1,6 +1,6 @@
 /*
     vectorized memchr and strlen implementaion for ARM with NEON, GCC4.8 or later.
-        
+	
 	Copyright (C) 2016-2017 Masaki Ota. All Rights Reserved.
     
     based on: 
@@ -12,21 +12,13 @@
 	How to compile this file
 	g++ neon_search.cpp -O3 -fomit-frame-pointer -mfpu=neon
 
-Raspberry Pi 3 Model B (Cortex-A53 1.2GHz, Raspbian(Jessie), 32-bit)
-ave             2      5      7     10     12     16     20     32     64    128    256    512   1024
-strlenANSI 1389.4  781.7  640.6  504.8  450.3  373.8  321.5  236.9  150.7  104.2   78.9   64.7   60.5
-strlenBLOG  955.3  609.9  512.8  427.1  396.6  358.7  336.5  304.1  277.5  264.6  258.1  254.5  253.4
-strlenNEON 1783.2  870.0  699.7  534.2  471.6  383.1  323.4  231.0  139.6   91.1   64.8   50.5   46.4
-memchrANSI 2245.1 1259.5 1023.8  798.6  709.8  596.2  519.9  409.8  311.1  261.8  235.9  221.2  216.9
-memchrNEON 1652.6  786.0  628.7  476.6  417.0  337.0  284.7  204.0  127.4   87.4   66.3   54.9   51.8
-
 ASUS TinkerBoard (Rockchip RK3288-C Cortex-A17 1.8 GHz, TinkerOS 2.0(Debian 9 Stretch), 32-bit)
 ave             2      5      7     10     12     16     20     32     64    128    256    512   1024
-strlenANSI  986.1  472.7  373.6  283.1  250.0  225.8  176.6  128.8   78.9   57.6   47.0   42.9   44.1
-strlenBLOG  628.3  404.0  328.4  256.8  236.6  231.1  190.2  167.3  137.3  126.6  121.6  117.3  122.6
-strlenNEON 1313.4  667.7  539.1  410.5  362.9  296.1  264.0  184.1  108.1   68.4   41.7   27.0   23.6
-memchrANSI 1016.3  577.9  472.2  373.7  335.2  280.3  249.2  176.9  110.7   77.3   60.1   51.8   53.4
-memchrNEON 1245.2  578.6  447.1  325.6  288.1  225.1  186.9  135.5   84.3   56.0   34.8   25.6   23.8
+strlenANSI  984.0  473.4  375.2  283.5  247.9  200.7  170.2  120.7   77.0   56.5   46.9   41.5   40.0
+strlenBLOG  638.9  406.6  330.1  257.5  232.0  199.9  180.5  154.4  132.9  121.8  116.8  114.1  113.4
+strlenNEON 1188.5  570.7  450.4  343.9  304.0  251.9  217.1  154.3   94.4   58.7   36.9   25.2   22.2
+memchrANSI 1019.2  580.6  471.0  371.5  330.0  275.8  231.9  173.4  106.5   75.1   60.0   51.1   48.8
+memchrNEON 1191.2  556.2  431.7  311.5  265.3  209.0  176.3  125.4   81.1   52.8   34.1   23.8   21.5
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -38,18 +30,22 @@ memchrNEON 1245.2  578.6  447.1  325.6  288.1  225.1  186.9  135.5   84.3   56.0
 #define ALIGN(x) __attribute__((aligned(x)))
 
 static const uint8x16_t compaction_mask = { 
-	1, 2, 4, 8, 16, 32, 64, 128, 
-	1, 2, 4, 8, 16, 32, 64, 128 
+    128, 64, 32, 16, 8, 4, 2, 1,
+    128, 64, 32, 16, 8, 4, 2, 1,
 };
 
-
-inline unsigned int GetBytesMask(uint8x16_t a) 
+inline unsigned int GetByteMask(uint8x16_t a) 
 {
 	uint8x16_t am = vandq_u8(a, compaction_mask);
-	uint8x8_t a_sum = vpadd_u8(vget_low_u8(am), vget_high_u8(am)); 
+	uint8x8_t a_sum = vpadd_u8(vget_high_u8(am), vget_low_u8(am)); 
 	a_sum = vpadd_u8(a_sum, a_sum);
 	a_sum = vpadd_u8(a_sum, a_sum);
-	return vget_lane_u16(vreinterpret_u16_u8(a_sum), 0);
+	return vget_lane_u32(vreinterpret_u32_u8(a_sum), 0);
+}
+
+inline unsigned int GetBytesMaskOffset(uint8x16_t a, uint8_t offset) 
+{
+	return GetByteMask(a) << (16 + offset);
 }
 
 
@@ -57,9 +53,9 @@ inline unsigned int GetBytesMask2(uint8x16_t a, uint8x16_t b)
 {
 	uint8x16_t am = vandq_u8(a, compaction_mask);
 	uint8x16_t bm = vandq_u8(b, compaction_mask);
-	uint8x8_t a_sum = vpadd_u8(vget_low_u8(am), vget_high_u8(am)); 
-	uint8x8_t b_sum = vpadd_u8(vget_low_u8(bm), vget_high_u8(bm)); 
-	a_sum = vpadd_u8(a_sum, b_sum);
+	uint8x8_t a_sum = vpadd_u8(vget_high_u8(am), vget_low_u8(am)); 
+	uint8x8_t b_sum = vpadd_u8(vget_high_u8(bm), vget_low_u8(bm)); 
+	a_sum = vpadd_u8(b_sum, a_sum);
 	a_sum = vpadd_u8(a_sum, a_sum);
 	return vget_lane_u32(vreinterpret_u32_u8(a_sum), 0);   
 }
@@ -80,6 +76,7 @@ inline bool isFound2(uint8x16_t a, uint8x16_t b)
 void *memchrNEON(const void *ptr, int c, size_t len)
 {
 	const char *p = reinterpret_cast<const char*>(ptr);
+
 	if (len >= 16) {
 		uint8x16_t c16 = vdupq_n_u8(static_cast<char>(c));
 		/* 16 byte alignment */
@@ -88,10 +85,9 @@ void *memchrNEON(const void *ptr, int c, size_t len)
 			uint8x16_t x = *(const uint8x16_t*)&p[-n];
 			uint8x16_t a = vceqq_u8(x, c16);
 
-			unsigned long mask = GetBytesMask(a);
-			mask = mask >> n;
+			unsigned long mask = GetByteMask(a) << (16 + n);
 			if (mask) {
-				return (void*)(p + __builtin_ctz(mask));
+				return (void*)(p + __builtin_clz(mask));
 			}
 			n = 16 - n;
 			len -= n;
@@ -105,12 +101,13 @@ void *memchrNEON(const void *ptr, int c, size_t len)
 
 			if (isFound2(a, b)) {
 				unsigned int mask = GetBytesMask2(a,b);
-				return (void*)(p + __builtin_ctz(mask));
+				return (void*)(p + __builtin_clz(mask));
 			}
 			len -= 32;
 			p += 32;
 		}
 	}
+
 	while (len > 0) {
 		if (*p == c) return (void*)p;
 		p++;
@@ -128,37 +125,22 @@ size_t strlenNEON(const char *p)
 	if (n > 0) {
 		uint8x16_t x = *(const uint8x16_t*)&p[-n];
 		uint8x16_t a = vceqq_u8(x, c16);
-
-		unsigned int mask = GetBytesMask(a);
-		mask = mask >> n;
+		unsigned long mask = GetByteMask(a) << (16 + n);
 		if (mask) {
-			return __builtin_ctz(mask);
+			return __builtin_clz(mask);
 		}
 		p += 16 - n;
 	}
 	assert((reinterpret_cast<size_t>(p) & 15) == 0);
-	if (reinterpret_cast<size_t>(p) & 31) {
+	for (;;) {
 		uint8x16_t x = *(const uint8x16_t*)&p[0];
 		uint8x16_t a = vceqq_u8(x, c16);
 
 		if (isFound(a)) {
- 			unsigned int mask = GetBytesMask(a);
-			return p + __builtin_ctz(mask) - top;
+ 			unsigned int mask = GetByteMask(a);
+			return p + __builtin_clz(mask) - top;
 		}
 		p += 16;
-	}
-	assert((reinterpret_cast<size_t>(p) & 31) == 0);
-	for (;;) {
-		uint8x16_t x = *(const uint8x16_t*)&p[0];
-		uint8x16_t y = *(const uint8x16_t*)&p[16];
-		uint8x16_t a = vceqq_u8(x, c16);
-		uint8x16_t b = vceqq_u8(y, c16);
-
-		if (isFound2(a,b)) {
- 			unsigned int mask = GetBytesMask2(a, b);
-			return p + __builtin_ctz(mask) - top;
-		}
-		p += 32;
 	}
 }
 
@@ -166,8 +148,7 @@ size_t strlenNEON(const char *p)
 #include <sys/time.h>
 #include <stdio.h>
 
-static inline double gettimeofday_sec()
-{
+static inline double gettimeofday_sec() {
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
 	return tv.tv_sec + (double) tv.tv_usec * 1e-6;
@@ -186,8 +167,7 @@ struct Result {
 	double time;
 	Result() {}
 	Result(int hit, int ret, double time) : hit(hit), ret(ret), time(time) {}
-	void put() const
-	{
+	void put() const {
 		printf("ret=%d(%.1f) time= %f usec\n", ret, ret / double(hit), time);
 	}
 };
@@ -225,29 +205,25 @@ Result test(const char *top, size_t n, size_t count)
 }
 
 struct FstrlenANSI {
-	static inline const char *find(const char *p, size_t)
-	{
+	static inline const char *find(const char *p, size_t) {
 		return strlen(p) + p;
 	}
 };
 
 struct FmemchrANSI {
-	static inline const char *find(const char *p, size_t n)
-	{
+	static inline const char *find(const char *p, size_t n) {
 		return reinterpret_cast<const char*>(memchr(p, 0, n));
 	}
 };
 
 struct FmemchrNEON {
-	static inline const char *find(const char *p, size_t n)
-	{
+	static inline const char *find(const char *p, size_t n) {
 		return reinterpret_cast<const char*>(memchrNEON(p, 0, n));
 	}
 };
 
 struct FstrlenNEON {
-	static inline const char *find(const char *p, size_t)
-	{
+	static inline const char *find(const char *p, size_t) {
 		return strlenNEON(p) + p;
 	}
 };
@@ -291,7 +267,7 @@ int main()
 		int ave = aveTbl[i];
 		createTable(begin, N, ave);
 
-		printf("test %d, %d\n", i, ave);
+		printf("test %d, %d\n", (int)i, ave);
 		Result ret;
 		int hit;
 
@@ -344,3 +320,6 @@ int main()
 	}
 	return 0;
 }
+                                       
+
+									   
