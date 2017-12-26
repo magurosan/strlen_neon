@@ -1,5 +1,5 @@
 # strlen_neon
-C/C++ strlen and memchr implementaion for Raspberry Pi 3, ASUS Tinker Board, and Other ARM devices with NEON (Advanced SIMD) instruction support.
+C/C++ strlen and memchr implementaion for Raspberry Pi 3, ASUS Tinker Board, and other ARMv7A/v8A or later CPUs, with NEON (Advanced SIMD) instruction set support.
 
 ## Benchmark
 ```
