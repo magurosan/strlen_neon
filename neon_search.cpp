@@ -43,13 +43,7 @@ inline unsigned int GetByteMask(uint8x16_t a)
 	return vget_lane_u32(vreinterpret_u32_u8(a_sum), 0);
 }
 
-inline unsigned int GetBytesMaskOffset(uint8x16_t a, uint8_t offset) 
-{
-	return GetByteMask(a) << (16 + offset);
-}
-
-
-inline unsigned int GetBytesMask2(uint8x16_t a, uint8x16_t b) 
+inline unsigned int GetByteMask2(uint8x16_t a, uint8x16_t b) 
 {
 	uint8x16_t am = vandq_u8(a, compaction_mask);
 	uint8x16_t bm = vandq_u8(b, compaction_mask);
@@ -100,7 +94,7 @@ void *memchrNEON(const void *ptr, int c, size_t len)
 			uint8x16_t b = vceqq_u8(y, c16);
 
 			if (isFound2(a, b)) {
-				unsigned int mask = GetBytesMask2(a,b);
+				unsigned int mask = GetByteMask2(a,b);
 				return (void*)(p + __builtin_clz(mask));
 			}
 			len -= 32;
@@ -238,8 +232,7 @@ int my_strlen(const char *s)
 	return i;
 }
 struct FstrlenBLOG {
-	static inline const char *find(const char *p, size_t)
-	{
+	static inline const char *find(const char *p, size_t){
 		return my_strlen(p) + p;
 	}
 };
