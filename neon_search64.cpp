@@ -40,7 +40,7 @@ inline signed int GetMatchIndex2(uint8x16_t x, uint8x16_t y)
 {
 	int8x16_t a = vornq_u8(match_indices0, x);
 	int8x16_t b = vornq_u8(match_indices1, y);
-	return (char)vminvq_u8(vminq_u8(a, b));
+	return (int8_t) vminvq_u8(vminq_u8(a, b));
 } 
 
 inline unsigned int GetByteMask(uint8x16_t a) 
